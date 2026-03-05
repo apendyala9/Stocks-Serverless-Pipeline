@@ -1,9 +1,17 @@
 #!/usr/bin/env node
-import * as cdk from 'aws-cdk-lib/core';
-import { InfraStack } from '../lib/infra-stack';
+import * as path from 'node:path';
+import * as dotenv from 'dotenv';
+import * as cdk from 'aws-cdk-lib';
+import { StocksIngestionStack } from '../lib/infra-stack';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const app = new cdk.App();
-new InfraStack(app, 'InfraStack', {
+new StocksIngestionStack(app, 'StocksIngestionStack', {
+  env: {
+    account: process.env.CDK_DEFAULT_ACCOUNT,
+    region: process.env.CDK_DEFAULT_REGION,
+  },
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */
