@@ -12,26 +12,25 @@ export class StocksIngestionStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const configuredApiKey = process.env.MASSIVE_API_KEY;
+    // Secret is created with a generated placeholder. Set the real API key in AWS after deploy:
     const massiveApiSecret = new secretsmanager.Secret(this, 'MassiveApiSecret', {
       secretName: 'massive_api_secret',
       description: 'Secret for the Massive API',
-      ...(configuredApiKey
-        ? { secretStringValue: cdk.SecretValue.unsafePlainText(configuredApiKey) }
-        : {
-            generateSecretString: {
-              generateStringKey: 'MASSIVE_API_KEY',
-              secretStringTemplate: '{}',
-            },
-          }),
+      generateSecretString: {
+        generateStringKey: 'MASSIVE_API_KEY',
+        secretStringTemplate: '{}',
+      },
     });
 
     const dailyWinnersTable = new dynamodb.Table(this, 'DailyStockWinnersTable', {
       partitionKey: { name: 'date', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'tickerSymbol', type: dynamodb.AttributeType.STRING },
+      timeToLiveAttribute: 'expiresAt',
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
+    // Create the ingestion lambda
     const ingestionLambda = new lambdaNodejs.NodejsFunction(this, 'StockIngestionLambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../lambda/ingestion/index.ts'),
@@ -40,15 +39,20 @@ export class StocksIngestionStack extends cdk.Stack {
       memorySize: 256,
       environment: {
         WINNERS_TABLE_NAME: dailyWinnersTable.tableName,
-        MASSIVE_API_KEY: massiveApiSecret.secretValue.unsafeUnwrap(),
+        // Pass secret ARN only; Lambda fetches the value at runtime (never put secrets in env vars)
+        MASSIVE_API_SECRET_ARN: massiveApiSecret.secretArn,
       },
       bundling: {
         sourceMap: true,
       },
     });
 
-    dailyWinnersTable.grantWriteData(ingestionLambda);
+    // Grant the ingestion lambda read/write access to the daily winners table
+    dailyWinnersTable.grantReadWriteData(ingestionLambda);
+    // Grant read access to the API key secret so Lambda can fetch it at runtime
+    massiveApiSecret.grantRead(ingestionLambda);
 
+    // Create the scheduler role
     const schedulerRole = new iam.Role(this, 'DailyIngestionSchedulerRole', {
       assumedBy: new iam.ServicePrincipal('scheduler.amazonaws.com'),
     });
@@ -59,6 +63,8 @@ export class StocksIngestionStack extends cdk.Stack {
       })
     );
 
+    // Create the daily ingestion schedule
+    // Run the ingestion lambda daily after US market close
     const dailyIngestionSchedule = new scheduler.CfnSchedule(this, 'DailyIngestionSchedule', {
       flexibleTimeWindow: { mode: 'OFF' },
       scheduleExpression: 'cron(0 21 * * ? *)',
@@ -71,6 +77,7 @@ export class StocksIngestionStack extends cdk.Stack {
       state: 'ENABLED',
     });
 
+    // Add the permission to allow the scheduler to invoke the ingestion lambda
     ingestionLambda.addPermission('AllowSchedulerInvoke', {
       principal: new iam.ServicePrincipal('scheduler.amazonaws.com'),
       sourceArn: dailyIngestionSchedule.attrArn,
