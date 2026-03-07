@@ -63,6 +63,7 @@ jobs:
       AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
       CDK_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME || '' }}
 
     steps:
       - name: Checkout
@@ -82,14 +83,14 @@ jobs:
           fi
 
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_ROLE_TO_ASSUME != '' }}
+        if: env.AWS_ROLE_TO_ASSUME != ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
 
       - name: Configure AWS credentials (access keys)
-        if: ${{ secrets.AWS_ROLE_TO_ASSUME == '' }}
+        if: env.AWS_ROLE_TO_ASSUME == ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
