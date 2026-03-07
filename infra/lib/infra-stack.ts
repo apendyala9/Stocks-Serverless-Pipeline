@@ -35,7 +35,8 @@ export class StocksIngestionStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_20_X,
       entry: path.join(__dirname, '../lambda/ingestion/index.ts'),
       handler: 'handler',
-      timeout: cdk.Duration.seconds(30),
+      // Backfills can take several minutes when honoring upstream API rate limits.
+      timeout: cdk.Duration.minutes(15),
       memorySize: 256,
       environment: {
         WINNERS_TABLE_NAME: dailyWinnersTable.tableName,
