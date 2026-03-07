@@ -79,8 +79,7 @@ describe('dynamo module', () => {
 
     expect(mockSend).toHaveBeenCalledTimes(2);
     const putInputs = mockSend.mock.calls.map((call) => call[0].input);
-    const expectedExpiresAt =
-      Math.floor(new Date('2026-03-06').getTime() / 1000) + 7 * 24 * 60 * 60;
+    const expectedExpiresAt = Math.floor(new Date(Date.UTC(2026, 3, 6)).getTime() / 1000);
 
     expect(putInputs).toEqual(
       expect.arrayContaining([

@@ -1,6 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import { SECONDS_PER_DAY, TTL_DAYS } from './config';
+import { TTL_MONTHS } from './config';
+import { getEpochSecondsForDatePlusMonths } from './time';
 import type { TickerResult } from './types';
 
 const dynamoDbDocumentClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -9,7 +10,7 @@ const dynamoDbDocumentClient = DynamoDBDocumentClient.from(new DynamoDBClient({}
  * Compute TTL for a record based on its date (not `now`).
  */
 const getExpiresAtForRecordDate = (recordDate: string): number =>
-  Math.floor(new Date(recordDate).getTime() / 1000) + TTL_DAYS * SECONDS_PER_DAY;
+  getEpochSecondsForDatePlusMonths(recordDate, TTL_MONTHS);
 
 /**
  * Check whether the winners table already contains at least one item.
