@@ -1,7 +1,7 @@
 import * as path from 'node:path';
 import { createServer } from 'node:http';
 import * as dotenv from 'dotenv';
-import { fetchRecentWinners } from './moversService';
+import { fetchRecentHistory, fetchRecentWinners } from './moversService';
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -18,7 +18,7 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (request.url !== '/movers' || request.method !== 'GET') {
+  if (request.method !== 'GET' || (request.url !== '/movers' && request.url !== '/history')) {
     response.statusCode = 404;
     response.setHeader('Content-Type', 'application/json');
     response.end(JSON.stringify({ message: 'Not found' }));
@@ -31,12 +31,15 @@ const server = createServer(async (request, response) => {
       throw new Error('WINNERS_TABLE_NAME is not configured.');
     }
 
-    const movers = await fetchRecentWinners(tableName);
+    const isHistoryRequest = request.url === '/history';
+    const payload = isHistoryRequest
+      ? await fetchRecentHistory(tableName)
+      : await fetchRecentWinners(tableName);
     response.statusCode = 200;
     response.setHeader('Content-Type', 'application/json');
-    response.end(JSON.stringify({ data: movers }));
+    response.end(JSON.stringify({ data: payload }));
   } catch (error) {
-    console.error('Local movers API failed', error);
+    console.error('Local stocks API failed', error);
     response.statusCode = 500;
     response.setHeader('Content-Type', 'application/json');
     response.end(JSON.stringify({ message: 'Failed to retrieve movers.' }));

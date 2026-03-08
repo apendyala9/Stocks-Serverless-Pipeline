@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { fetchRecentWinners } from './moversService';
+import { fetchRecentHistory, fetchRecentWinners } from './moversService';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -15,17 +15,21 @@ export const handler = async (_event: APIGatewayProxyEvent): Promise<APIGatewayP
       throw new Error('WINNERS_TABLE_NAME is not configured.');
     }
 
-    const movers = await fetchRecentWinners(tableName);
+    const requestPath = _event.path ?? '';
+    const isHistoryRequest = requestPath.endsWith('/history');
+    const payload = isHistoryRequest
+      ? await fetchRecentHistory(tableName)
+      : await fetchRecentWinners(tableName);
 
     return {
       statusCode: 200,
       headers: CORS_HEADERS,
       body: JSON.stringify({
-        data: movers,
+        data: payload,
       }),
     };
   } catch (error) {
-    console.error('Movers API failed', error);
+    console.error('Stocks API failed', error);
     return {
       statusCode: 500,
       headers: CORS_HEADERS,
