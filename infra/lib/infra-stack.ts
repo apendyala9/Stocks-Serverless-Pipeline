@@ -1,12 +1,16 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as scheduler from 'aws-cdk-lib/aws-scheduler';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 
 export class StocksIngestionStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -53,6 +57,33 @@ export class StocksIngestionStack extends cdk.Stack {
     // Grant read access to the API key secret so Lambda can fetch it at runtime
     massiveApiSecret.grantRead(ingestionLambda);
 
+    const moversApiLambda = new lambdaNodejs.NodejsFunction(this, 'MoversApiLambda', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../lambda/api/index.ts'),
+      handler: 'handler',
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        WINNERS_TABLE_NAME: dailyWinnersTable.tableName,
+      },
+      bundling: {
+        sourceMap: true,
+      },
+    });
+    dailyWinnersTable.grantReadData(moversApiLambda);
+
+    const moversApi = new apigateway.RestApi(this, 'MoversRestApi', {
+      restApiName: 'MoversService',
+      description: 'REST API for retrieving winning stock movers.',
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: ['GET', 'OPTIONS'],
+      },
+    });
+
+    const moversResource = moversApi.root.addResource('movers');
+    moversResource.addMethod('GET', new apigateway.LambdaIntegration(moversApiLambda));
+
     // Create the scheduler role
     const schedulerRole = new iam.Role(this, 'DailyIngestionSchedulerRole', {
       assumedBy: new iam.ServicePrincipal('scheduler.amazonaws.com'),
@@ -83,6 +114,43 @@ export class StocksIngestionStack extends cdk.Stack {
       principal: new iam.ServicePrincipal('scheduler.amazonaws.com'),
       sourceArn: dailyIngestionSchedule.attrArn,
       action: 'lambda:InvokeFunction',
+    });
+
+    const websiteBucket = new s3.Bucket(this, 'MoversFrontendBucket', {
+      websiteIndexDocument: 'index.html',
+      websiteErrorDocument: 'index.html',
+      publicReadAccess: true,
+      blockPublicAccess: new s3.BlockPublicAccess({
+        blockPublicAcls: false,
+        blockPublicPolicy: false,
+        ignorePublicAcls: false,
+        restrictPublicBuckets: false,
+      }),
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
+    const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+    const frontendSource = fs.existsSync(frontendDistPath)
+      ? s3deploy.Source.asset(frontendDistPath)
+      : s3deploy.Source.data(
+          'index.html',
+          '<!doctype html><html><body><h1>Frontend artifact missing</h1><p>Run frontend build before deploy.</p></body></html>'
+        );
+
+    new s3deploy.BucketDeployment(this, 'DeployMoversFrontend', {
+      destinationBucket: websiteBucket,
+      sources: [frontendSource],
+    });
+
+    new cdk.CfnOutput(this, 'MoversApiUrl', {
+      value: `${moversApi.url}movers`,
+      description: 'GET endpoint for recent winning stock movers.',
+    });
+
+    new cdk.CfnOutput(this, 'MoversWebsiteUrl', {
+      value: websiteBucket.bucketWebsiteUrl,
+      description: 'S3 static website URL for movers frontend.',
     });
   }
 }

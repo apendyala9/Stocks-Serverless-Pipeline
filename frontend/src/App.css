@@ -1,0 +1,62 @@
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.panel {
+  width: min(860px, 100%);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+  padding: 1.5rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.subtitle {
+  margin: 0.35rem 0 1.2rem;
+  color: #64748b;
+}
+
+.status-message {
+  color: #334155;
+}
+
+.error-message {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.movers-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.movers-table th,
+.movers-table td {
+  text-align: left;
+  padding: 0.7rem 0.55rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.movers-table th {
+  font-size: 0.9rem;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.gain {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.loss {
+  color: #b91c1c;
+  font-weight: 600;
+}

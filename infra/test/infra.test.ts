@@ -51,7 +51,6 @@ describe('StocksIngestionStack', () => {
   test('creates ingestion lambda with expected runtime, timeout, memory, and env vars', () => {
     const template = createTemplate();
 
-    template.resourceCountIs('AWS::Lambda::Function', 1);
     template.hasResourceProperties('AWS::Lambda::Function', {
       Runtime: 'nodejs20.x',
       Handler: 'index.handler',
@@ -64,6 +63,48 @@ describe('StocksIngestionStack', () => {
         },
       },
     });
+  });
+
+  test('creates movers api lambda with expected runtime, timeout, and env vars', () => {
+    const template = createTemplate();
+
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      Runtime: 'nodejs20.x',
+      Handler: 'index.handler',
+      Timeout: 30,
+      MemorySize: 256,
+      Environment: {
+        Variables: {
+          WINNERS_TABLE_NAME: Match.anyValue(),
+        },
+      },
+    });
+  });
+
+  test('creates REST API route for GET /movers', () => {
+    const template = createTemplate();
+
+    template.resourceCountIs('AWS::ApiGateway::RestApi', 1);
+    template.hasResourceProperties('AWS::ApiGateway::Method', {
+      HttpMethod: 'GET',
+      Integration: {
+        Type: 'AWS_PROXY',
+      },
+    });
+  });
+
+  test('creates S3 website bucket and deployment', () => {
+    const template = createTemplate();
+
+    template.resourceCountIs('AWS::S3::Bucket', 1);
+    template.hasResourceProperties('AWS::S3::Bucket', {
+      WebsiteConfiguration: {
+        IndexDocument: 'index.html',
+        ErrorDocument: 'index.html',
+      },
+    });
+
+    template.resourceCountIs('Custom::CDKBucketDeployment', 1);
   });
 
   test('creates daily scheduler and grants scheduler invoke permission on lambda', () => {

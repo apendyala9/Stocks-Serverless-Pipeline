@@ -32,6 +32,23 @@ jobs:
             npm install
           fi
 
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Frontend tests
+        working-directory: frontend
+        run: npm run test
+
       - name: Build
         run: npm run build
 
@@ -80,6 +97,26 @@ jobs:
             npm ci
           else
             npm install
+          fi
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Verify frontend artifact exists
+        run: |
+          if [ ! -d ../frontend/dist ]; then
+            echo "frontend/dist is missing. Frontend build artifact is required before CDK deploy."
+            exit 1
           fi
 
       - name: Configure AWS credentials (OIDC)

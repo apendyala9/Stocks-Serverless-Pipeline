@@ -9,7 +9,8 @@
     "clean": "rm -rf dist",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "dev:api": "ts-node lambda/api/local-server.ts"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
