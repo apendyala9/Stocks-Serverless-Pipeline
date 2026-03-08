@@ -83,6 +83,8 @@ export class StocksIngestionStack extends cdk.Stack {
 
     const moversResource = moversApi.root.addResource('movers');
     moversResource.addMethod('GET', new apigateway.LambdaIntegration(moversApiLambda));
+    const historyResource = moversApi.root.addResource('history');
+    historyResource.addMethod('GET', new apigateway.LambdaIntegration(moversApiLambda));
 
     // Create the scheduler role
     const schedulerRole = new iam.Role(this, 'DailyIngestionSchedulerRole', {
@@ -146,6 +148,10 @@ export class StocksIngestionStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'MoversApiUrl', {
       value: `${moversApi.url}movers`,
       description: 'GET endpoint for recent winning stock movers.',
+    });
+    new cdk.CfnOutput(this, 'HistoryApiUrl', {
+      value: `${moversApi.url}history`,
+      description: 'GET endpoint for full stock history used by charts.',
     });
 
     new cdk.CfnOutput(this, 'MoversWebsiteUrl', {

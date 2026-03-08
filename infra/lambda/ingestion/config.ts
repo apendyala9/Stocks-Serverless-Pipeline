@@ -1,4 +1,4 @@
-export const WATCHLIST = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA'] as const;
+export const WATCHLIST = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA'] as const;
 export const MARKET_TIMEZONE = 'America/New_York';
 export const MAX_LOOKBACK_DAYS = 14;
 export const HISTORY_DAYS = 7;

@@ -1,44 +1,61 @@
-import './App.css'
 import { useEffect, useState } from 'react'
+import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded'
+import EmojiEventsOutlinedIcon from '@mui/icons-material/EmojiEventsOutlined'
+import ShowChartIcon from '@mui/icons-material/ShowChart'
+import {
+  Alert,
+  BottomNavigation,
+  BottomNavigationAction,
+  Box,
+  CircularProgress,
+  Container,
+  Paper,
+  Stack,
+  Typography,
+} from '@mui/material'
+import type { HistoryApiResponse, HistoryDay, MoversApiResponse, Mover } from './types'
+import { DailyBarsView } from './views/DailyBarsView'
+import { TrendsView } from './views/TrendsView'
+import { WinnersView } from './views/WinnersView'
 
-type Mover = {
-  date: string
-  tickerSymbol: string
-  percentChange: number
-  closingPrice: number
-}
-
-type MoversApiResponse = {
-  data: Mover[]
-}
+type DashboardView = 'winners' | 'trend' | 'bars'
 
 function App() {
   const [movers, setMovers] = useState<Mover[]>([])
+  const [history, setHistory] = useState<HistoryDay[]>([])
+  const [selectedView, setSelectedView] = useState<DashboardView>('winners')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
 
-    const loadMovers = async () => {
+    const loadData = async () => {
       try {
         setLoading(true)
         const apiBase = import.meta.env.VITE_API_BASE_URL ?? ''
-        const response = await fetch(`${apiBase}/movers`, {
-          signal: controller.signal,
-        })
+        const [moversResponse, historyResponse] = await Promise.all([
+          fetch(`${apiBase}/movers`, { signal: controller.signal }),
+          fetch(`${apiBase}/history`, { signal: controller.signal }),
+        ])
 
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`)
+        if (!moversResponse.ok) {
+          throw new Error(`Request failed with status ${moversResponse.status} for /movers`)
+        }
+        if (!historyResponse.ok) {
+          throw new Error(`Request failed with status ${historyResponse.status} for /history`)
         }
 
-        const payload = (await response.json()) as MoversApiResponse
-        setMovers(payload.data ?? [])
-        console.log('movers', payload.data)
+        const moversPayload = (await moversResponse.json()) as MoversApiResponse
+        const historyPayload = (await historyResponse.json()) as HistoryApiResponse
+        console.log('moversPayload', moversPayload)
+        console.log('historyPayload', historyPayload)
+        setMovers(moversPayload.data ?? [])
+        setHistory(historyPayload.data ?? [])
       } catch (requestError) {
         if (!controller.signal.aborted) {
-          console.error('Failed to load movers', requestError)
-          setError('Failed to load movers.')
+          console.error('Failed to load dashboard data', requestError)
+          setError('Failed to load dashboard data.')
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -47,57 +64,58 @@ function App() {
       }
     }
 
-    void loadMovers()
+    void loadData()
     return () => controller.abort()
   }, [])
 
-  const formatPercentChange = (value: number): string => `${value.toFixed(2)}%`
-  const formatClosingPrice = (value: number): string => `$${value.toFixed(2)}`
-
   return (
-    <main className="app-container">
-      <div className="panel">
-        <h1>Top Mover History</h1>
-        <p className="subtitle">Last 7 market days from DynamoDB</p>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: 10, pt: 3 }}>
+      <Container maxWidth="lg">
+        <Paper elevation={3} sx={{ p: 3 }}>
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="h4">Stock Movers Dashboard</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Last 7 market days from DynamoDB
+              </Typography>
+            </Box>
 
-        {loading && (
-          <p role="status" className="status-message">
-            Loading winning stocks...
-          </p>
-        )}
+            {loading && (
+              <Box role="status" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={20} />
+                <Typography>Loading stock dashboard...</Typography>
+              </Box>
+            )}
 
-        {!loading && error && (
-          <p role="alert" className="error-message">
-            {error}
-          </p>
-        )}
+            {!loading && error && (
+              <Alert role="alert" severity="error">
+                {error}
+              </Alert>
+            )}
 
-        {!loading && !error && (
-          <table className="movers-table" aria-label="Top mover history">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Ticker</th>
-                <th>Percent Change</th>
-                <th>Close</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movers.map((mover) => (
-                <tr key={`${mover.date}-${mover.tickerSymbol}`}>
-                  <td>{mover.date}</td>
-                  <td>{mover.tickerSymbol}</td>
-                  <td className={mover.percentChange >= 0 ? 'gain' : 'loss'}>
-                    {formatPercentChange(mover.percentChange)}
-                  </td>
-                  <td>{formatClosingPrice(mover.closingPrice)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </main>
+            {!loading && !error && selectedView === 'winners' && <WinnersView movers={movers} />}
+            {!loading && !error && selectedView === 'trend' && <TrendsView history={history} />}
+            {!loading && !error && selectedView === 'bars' && <DailyBarsView history={history} />}
+          </Stack>
+        </Paper>
+      </Container>
+
+      <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0 }} elevation={8}>
+        <BottomNavigation
+          showLabels
+          value={selectedView}
+          onChange={(_event, value: DashboardView) => setSelectedView(value)}
+        >
+          <BottomNavigationAction
+            label="Winners"
+            value="winners"
+            icon={<EmojiEventsOutlinedIcon />}
+          />
+          <BottomNavigationAction label="Trend" value="trend" icon={<ShowChartIcon />} />
+          <BottomNavigationAction label="Daily Bars" value="bars" icon={<BarChartRoundedIcon />} />
+        </BottomNavigation>
+      </Paper>
+    </Box>
   )
 }
 
