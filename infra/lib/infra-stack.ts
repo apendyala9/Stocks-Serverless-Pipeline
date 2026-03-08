@@ -11,6 +11,8 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as scheduler from 'aws-cdk-lib/aws-scheduler';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 
 export class StocksIngestionStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -145,6 +147,54 @@ export class StocksIngestionStack extends cdk.Stack {
       sources: [frontendSource],
     });
 
+    const apiCachePolicy = new cloudfront.CachePolicy(this, 'MoversApiCachePolicy', {
+      comment: '1-hour cache policy for movers and history API responses',
+      defaultTtl: cdk.Duration.hours(1),
+      maxTtl: cdk.Duration.hours(1),
+      minTtl: cdk.Duration.seconds(0),
+      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+      headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+      enableAcceptEncodingBrotli: true,
+      enableAcceptEncodingGzip: true,
+    });
+
+    const distribution = new cloudfront.Distribution(this, 'MoversDistribution', {
+      defaultBehavior: {
+        origin: new origins.S3StaticWebsiteOrigin(websiteBucket),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      },
+      additionalBehaviors: {
+        'movers*': {
+          origin: new origins.RestApiOrigin(moversApi),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+          cachePolicy: apiCachePolicy,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        },
+        'history*': {
+          origin: new origins.RestApiOrigin(moversApi),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+          cachePolicy: apiCachePolicy,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        },
+      },
+      defaultRootObject: 'index.html',
+      errorResponses: [
+        {
+          httpStatus: 403,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html',
+          ttl: cdk.Duration.minutes(5),
+        },
+        {
+          httpStatus: 404,
+          responseHttpStatus: 200,
+          responsePagePath: '/index.html',
+          ttl: cdk.Duration.minutes(5),
+        },
+      ],
+    });
+
     new cdk.CfnOutput(this, 'MoversApiUrl', {
       value: `${moversApi.url}movers`,
       description: 'GET endpoint for recent winning stock movers.',
@@ -157,6 +207,10 @@ export class StocksIngestionStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'MoversWebsiteUrl', {
       value: websiteBucket.bucketWebsiteUrl,
       description: 'S3 static website URL for movers frontend.',
+    });
+    new cdk.CfnOutput(this, 'MoversCloudFrontUrl', {
+      value: `https://${distribution.distributionDomainName}`,
+      description: 'CloudFront URL for frontend and cached API routes.',
     });
   }
 }
