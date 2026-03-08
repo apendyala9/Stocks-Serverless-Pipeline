@@ -6,6 +6,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Allow-Methods': 'GET,OPTIONS',
   'Content-Type': 'application/json',
+  'Cache-Control': 'public, max-age=3600',
 };
 
 export const handler = async (_event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
