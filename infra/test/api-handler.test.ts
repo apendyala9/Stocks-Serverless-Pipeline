@@ -30,7 +30,7 @@ describe('api movers handler', () => {
     const body = JSON.parse(response.body) as { message: string };
 
     expect(response.statusCode).toBe(500);
-    expect(body.message).toBe('Failed to retrieve movers.');
+    expect(body.message).toBe('Failed to retrieve data.');
     expect(mockFetchRecentWinners).not.toHaveBeenCalled();
     expect(mockLoggerError).toHaveBeenCalledWith('Stocks API failed', expect.any(Object));
   });
@@ -98,7 +98,7 @@ describe('api movers handler', () => {
     const body = JSON.parse(response.body) as { message: string };
 
     expect(response.statusCode).toBe(500);
-    expect(body.message).toBe('Failed to retrieve movers.');
+    expect(body.message).toBe('Failed to retrieve data.');
     expect(mockLoggerError).toHaveBeenCalledWith('Stocks API failed', expect.any(Object));
   });
 });
