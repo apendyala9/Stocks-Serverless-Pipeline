@@ -2,6 +2,7 @@ type TestSetup = {
   handler: (event: unknown) => Promise<{ statusCode: number; body: string }>;
   mockSend: jest.Mock;
   mockRestClient: jest.Mock;
+  mockLoggerError: jest.Mock;
   mockTableHasAnyData: jest.Mock;
   mockStoreResultsForDate: jest.Mock;
   mockGetWinnerSymbol: jest.Mock;
@@ -29,6 +30,7 @@ const loadHandlerWithMocks = async (env: {
 
   const mockSend = jest.fn();
   const mockRestClient = jest.fn(() => ({ fakeRestClient: true }));
+  const mockLoggerError = jest.fn();
   const mockTableHasAnyData = jest.fn();
   const mockStoreResultsForDate = jest.fn();
   const mockGetWinnerSymbol = jest.fn();
@@ -60,6 +62,11 @@ const loadHandlerWithMocks = async (env: {
     backfillHistory: mockBackfillHistory,
     getLatestMarketDateResults: mockGetLatestMarketDateResults,
   }));
+  jest.doMock('../lambda/shared/logger', () => ({
+    logger: {
+      error: mockLoggerError,
+    },
+  }));
 
   // `require` avoids NodeNext explicit extension warnings in test type-checking.
   const module = require('../lambda/ingestion/index') as {
@@ -70,6 +77,7 @@ const loadHandlerWithMocks = async (env: {
     handler: module.handler as unknown as (event: unknown) => Promise<{ statusCode: number; body: string }>,
     mockSend,
     mockRestClient,
+    mockLoggerError,
     mockTableHasAnyData,
     mockStoreResultsForDate,
     mockGetWinnerSymbol,
@@ -80,7 +88,7 @@ const loadHandlerWithMocks = async (env: {
 
 describe('ingestion handler', () => {
   test('returns 500 when MASSIVE_API_SECRET_ARN is missing', async () => {
-    const { handler, mockSend } = await loadHandlerWithMocks({
+    const { handler, mockSend, mockLoggerError } = await loadHandlerWithMocks({
       WINNERS_TABLE_NAME: 'DailyWinners',
     });
 
@@ -90,10 +98,11 @@ describe('ingestion handler', () => {
     expect(response.statusCode).toBe(500);
     expect(body.message).toBe('Ingestion failed.');
     expect(mockSend).not.toHaveBeenCalled();
+    expect(mockLoggerError).toHaveBeenCalledWith('Ingestion failed', expect.any(Object));
   });
 
   test('returns 500 when WINNERS_TABLE_NAME is missing', async () => {
-    const { handler, mockSend } = await loadHandlerWithMocks({
+    const { handler, mockSend, mockLoggerError } = await loadHandlerWithMocks({
       MASSIVE_API_SECRET_ARN: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:key',
     });
     mockSend.mockResolvedValue({
@@ -105,6 +114,7 @@ describe('ingestion handler', () => {
 
     expect(response.statusCode).toBe(500);
     expect(body.message).toBe('Ingestion failed.');
+    expect(mockLoggerError).toHaveBeenCalledWith('Ingestion failed', expect.any(Object));
   });
 
   test('backfills history when table has no data', async () => {

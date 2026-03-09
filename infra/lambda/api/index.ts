@@ -1,5 +1,6 @@
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { fetchRecentHistory, fetchRecentWinners } from './moversService';
+import { logger } from '../shared/logger';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -30,7 +31,7 @@ export const handler = async (_event: APIGatewayProxyEvent): Promise<APIGatewayP
       }),
     };
   } catch (error) {
-    console.error('Stocks API failed', error);
+    logger.error('Stocks API failed', { error });
     return {
       statusCode: 500,
       headers: CORS_HEADERS,

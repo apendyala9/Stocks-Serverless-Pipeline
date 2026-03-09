@@ -65,6 +65,14 @@ export const storeResultsForDate = async (
               closingPrice: Number(result.close.toFixed(4)),
               isWinner: result.symbol === winnerSymbol,
               expiresAt,
+              gsi1pk: 'HISTORY',
+              gsi1sk: `${date}#${result.symbol}`,
+              ...(result.symbol === winnerSymbol
+                ? {
+                    gsi2pk: 'WINNERS',
+                    gsi2sk: `${date}#${result.symbol}`,
+                  }
+                : {}),
             },
             ConditionExpression: 'attribute_not_exists(#date) AND attribute_not_exists(#ticker)',
             ExpressionAttributeNames: {

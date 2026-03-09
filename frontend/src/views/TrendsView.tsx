@@ -1,6 +1,7 @@
 import { LineChart } from '@mui/x-charts/LineChart'
 import { Paper, Typography } from '@mui/material'
 import type { HistoryDay } from '../types'
+import { cardPaddingSx } from './viewStyles'
 
 type TrendsViewProps = {
   history: HistoryDay[]
@@ -27,7 +28,7 @@ export const TrendsView = ({ history }: TrendsViewProps) => {
   }))
 
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
+    <Paper variant="outlined" sx={cardPaddingSx}>
       <Typography variant="subtitle1" gutterBottom>
         Percent Change by Ticker (Last 7 Days)
       </Typography>
@@ -35,7 +36,7 @@ export const TrendsView = ({ history }: TrendsViewProps) => {
         height={360}
         xAxis={[{ scaleType: 'point', data: dates }]}
         series={series}
-        margin={{ left: 60, right: 20, top: 20, bottom: 40 }}
+        margin={{ left: 60, right: 40, top: 20, bottom: 40 }}
       />
     </Paper>
   )

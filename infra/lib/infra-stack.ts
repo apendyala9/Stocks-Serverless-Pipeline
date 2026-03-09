@@ -7,6 +7,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as scheduler from 'aws-cdk-lib/aws-scheduler';
 import * as s3 from 'aws-cdk-lib/aws-s3';
@@ -35,6 +36,18 @@ export class StocksIngestionStack extends cdk.Stack {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
+    dailyWinnersTable.addGlobalSecondaryIndex({
+      indexName: 'HistoryByDateIndex',
+      partitionKey: { name: 'gsi1pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'gsi1sk', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+    dailyWinnersTable.addGlobalSecondaryIndex({
+      indexName: 'WinnersByDateIndex',
+      partitionKey: { name: 'gsi2pk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'gsi2sk', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
 
     // Create the ingestion lambda
     const ingestionLambda = new lambdaNodejs.NodejsFunction(this, 'StockIngestionLambda', {
@@ -44,6 +57,7 @@ export class StocksIngestionStack extends cdk.Stack {
       // Backfills can take several minutes when honoring upstream API rate limits.
       timeout: cdk.Duration.minutes(15),
       memorySize: 256,
+      logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
         WINNERS_TABLE_NAME: dailyWinnersTable.tableName,
         // Pass secret ARN only; Lambda fetches the value at runtime (never put secrets in env vars)
@@ -65,6 +79,7 @@ export class StocksIngestionStack extends cdk.Stack {
       handler: 'handler',
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
+      logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
         WINNERS_TABLE_NAME: dailyWinnersTable.tableName,
       },
