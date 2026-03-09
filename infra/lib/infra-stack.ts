@@ -162,18 +162,6 @@ export class StocksIngestionStack extends cdk.Stack {
       sources: [frontendSource],
     });
 
-    const apiCachePolicy = new cloudfront.CachePolicy(this, 'MoversApiCachePolicy', {
-      comment: '1-hour cache policy for movers and history API responses',
-      defaultTtl: cdk.Duration.hours(1),
-      maxTtl: cdk.Duration.hours(1),
-      minTtl: cdk.Duration.seconds(0),
-      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
-      queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
-      headerBehavior: cloudfront.CacheHeaderBehavior.none(),
-      enableAcceptEncodingBrotli: true,
-      enableAcceptEncodingGzip: true,
-    });
-
     const distribution = new cloudfront.Distribution(this, 'MoversDistribution', {
       defaultBehavior: {
         origin: new origins.S3StaticWebsiteOrigin(websiteBucket),
@@ -183,13 +171,14 @@ export class StocksIngestionStack extends cdk.Stack {
         'movers*': {
           origin: new origins.RestApiOrigin(moversApi),
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-          cachePolicy: apiCachePolicy,
+          // Look at cache-control header for the actual cache policy
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         },
         'history*': {
           origin: new origins.RestApiOrigin(moversApi),
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-          cachePolicy: apiCachePolicy,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         },
       },
