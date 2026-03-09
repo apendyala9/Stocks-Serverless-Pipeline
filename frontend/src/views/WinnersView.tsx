@@ -9,6 +9,7 @@ import {
   Typography,
 } from '@mui/material'
 import type { Mover } from '../types'
+import { emptyStateSx, winnerPercentChangeCellSx } from './viewStyles'
 
 type WinnersViewProps = {
   movers: Mover[]
@@ -35,10 +36,7 @@ export const WinnersView = ({ movers }: WinnersViewProps) => (
             <TableCell>{mover.tickerSymbol}</TableCell>
             <TableCell
               align="right"
-              sx={{
-                color: mover.percentChange >= 0 ? 'success.main' : 'error.main',
-                fontWeight: 700,
-              }}
+              sx={winnerPercentChangeCellSx(mover.percentChange)}
             >
               {formatPercentChange(mover.percentChange)}
             </TableCell>
@@ -48,7 +46,7 @@ export const WinnersView = ({ movers }: WinnersViewProps) => (
       </TableBody>
     </Table>
     {movers.length === 0 && (
-      <Typography sx={{ p: 2 }} color="text.secondary">
+      <Typography sx={emptyStateSx} color="text.secondary">
         No winner data available.
       </Typography>
     )}

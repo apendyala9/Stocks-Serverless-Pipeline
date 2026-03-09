@@ -37,6 +37,22 @@ describe('StocksIngestionStack', () => {
         AttributeName: 'expiresAt',
         Enabled: true,
       },
+      GlobalSecondaryIndexes: Match.arrayWith([
+        Match.objectLike({
+          IndexName: 'HistoryByDateIndex',
+          KeySchema: [
+            { AttributeName: 'gsi1pk', KeyType: 'HASH' },
+            { AttributeName: 'gsi1sk', KeyType: 'RANGE' },
+          ],
+        }),
+        Match.objectLike({
+          IndexName: 'WinnersByDateIndex',
+          KeySchema: [
+            { AttributeName: 'gsi2pk', KeyType: 'HASH' },
+            { AttributeName: 'gsi2sk', KeyType: 'RANGE' },
+          ],
+        }),
+      ]),
     });
 
     const tables = template.findResources('AWS::DynamoDB::Table');
@@ -78,6 +94,15 @@ describe('StocksIngestionStack', () => {
           WINNERS_TABLE_NAME: Match.anyValue(),
         },
       },
+    });
+  });
+
+  test('configures one-month CloudWatch log retention for both lambdas', () => {
+    const template = createTemplate();
+
+    template.resourceCountIs('Custom::LogRetention', 2);
+    template.hasResourceProperties('Custom::LogRetention', {
+      RetentionInDays: 30,
     });
   });
 

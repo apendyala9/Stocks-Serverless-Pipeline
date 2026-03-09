@@ -5,20 +5,26 @@ const loadApiHandlerWithMocks = async () => {
 
   const mockFetchRecentWinners = jest.fn();
   const mockFetchRecentHistory = jest.fn();
+  const mockLoggerError = jest.fn();
   jest.doMock('../lambda/api/moversService', () => ({
     fetchRecentWinners: mockFetchRecentWinners,
     fetchRecentHistory: mockFetchRecentHistory,
   }));
+  jest.doMock('../lambda/shared/logger', () => ({
+    logger: {
+      error: mockLoggerError,
+    },
+  }));
 
   // `require` avoids NodeNext explicit extension warnings in test type-checking.
   const module = require('../lambda/api/index') as LoadedApiModule;
-  return { module, mockFetchRecentWinners, mockFetchRecentHistory };
+  return { module, mockFetchRecentWinners, mockFetchRecentHistory, mockLoggerError };
 };
 
 describe('api movers handler', () => {
   test('returns 500 when WINNERS_TABLE_NAME is missing', async () => {
     delete process.env.WINNERS_TABLE_NAME;
-    const { module, mockFetchRecentWinners } = await loadApiHandlerWithMocks();
+    const { module, mockFetchRecentWinners, mockLoggerError } = await loadApiHandlerWithMocks();
 
     const response = await module.handler({} as never);
     const body = JSON.parse(response.body) as { message: string };
@@ -26,6 +32,7 @@ describe('api movers handler', () => {
     expect(response.statusCode).toBe(500);
     expect(body.message).toBe('Failed to retrieve movers.');
     expect(mockFetchRecentWinners).not.toHaveBeenCalled();
+    expect(mockLoggerError).toHaveBeenCalledWith('Stocks API failed', expect.any(Object));
   });
 
   test('returns movers payload when fetch succeeds', async () => {
@@ -84,7 +91,7 @@ describe('api movers handler', () => {
 
   test('returns 500 when fetchRecentWinners throws', async () => {
     process.env.WINNERS_TABLE_NAME = 'DailyWinners';
-    const { module, mockFetchRecentWinners } = await loadApiHandlerWithMocks();
+    const { module, mockFetchRecentWinners, mockLoggerError } = await loadApiHandlerWithMocks();
     mockFetchRecentWinners.mockRejectedValue(new Error('boom'));
 
     const response = await module.handler({} as never);
@@ -92,5 +99,6 @@ describe('api movers handler', () => {
 
     expect(response.statusCode).toBe(500);
     expect(body.message).toBe('Failed to retrieve movers.');
+    expect(mockLoggerError).toHaveBeenCalledWith('Stocks API failed', expect.any(Object));
   });
 });
