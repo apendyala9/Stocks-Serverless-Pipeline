@@ -76,7 +76,7 @@ function App() {
             <Box>
               <Typography variant="h4">Stock Movers Dashboard</Typography>
               <Typography variant="body2" color="text.secondary">
-                Last 7 market days from DynamoDB
+                Last 7 market days of stock data
               </Typography>
             </Box>
 

@@ -7,7 +7,6 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Allow-Methods': 'GET,OPTIONS',
   'Content-Type': 'application/json',
-  'Cache-Control': 'public, max-age=3600',
 };
 
 export const handler = async (_event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
@@ -23,9 +22,17 @@ export const handler = async (_event: APIGatewayProxyEvent): Promise<APIGatewayP
       ? await fetchRecentHistory(tableName)
       : await fetchRecentWinners(tableName);
 
+    const isEmpty = !payload || payload.length === 0;
+    const cacheControl = isEmpty
+      ? 'public, max-age=60, stale-while-revalidate=30'
+      : 'public, max-age=3600, stale-while-revalidate=300';
+
     return {
       statusCode: 200,
-      headers: CORS_HEADERS,
+      headers: {
+        ...CORS_HEADERS,
+        'Cache-Control': cacheControl,
+      },
       body: JSON.stringify({
         data: payload,
       }),
@@ -36,7 +43,7 @@ export const handler = async (_event: APIGatewayProxyEvent): Promise<APIGatewayP
       statusCode: 500,
       headers: CORS_HEADERS,
       body: JSON.stringify({
-        message: 'Failed to retrieve movers.',
+        message: 'Failed to retrieve data.',
       }),
     };
   }
