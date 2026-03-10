@@ -5,7 +5,20 @@ import {
   scheduleMassiveRequest,
   sleep,
 } from './massiveRateLimiter';
-import type { MassiveRestClient, OpenCloseData, TickerResult } from './types';
+import { logger } from '../shared/logger';
+import type { HttpErrorWithResponse, MassiveRestClient, OpenCloseData, TickerResult } from './types';
+
+const getSafeErrorContext = (error: unknown) => {
+  const candidate = error as HttpErrorWithResponse;
+  return {
+    errorName: candidate.name ?? 'UnknownError',
+    errorCode: candidate.code,
+    errorMessage: candidate.message ?? 'Unknown failure',
+    statusCode: candidate.response?.status,
+    requestId: candidate.response?.data?.request_id,
+    providerMessage: candidate.response?.data?.message,
+  };
+};
 
 /**
  * Compute percent change between open and close prices.
@@ -47,14 +60,23 @@ export const fetchTickerForDate = async (
       };
     } catch (error) {
       if (!isRateLimitedError(error) || attempt > MAX_429_RETRIES) {
-        console.warn(`Unable to fetch ${ticker} for ${date}`, error);
+        logger.warn('Unable to fetch ticker daily open/close data', {
+          ticker,
+          date,
+          attempt,
+          ...getSafeErrorContext(error),
+        });
         return null;
       }
 
       const retryDelayMs = getRetryDelayMs(attempt, error);
-      console.warn(
-        `Massive rate limit hit for ${ticker} on ${date}. Retrying in ${retryDelayMs}ms (attempt ${attempt}/${MAX_429_RETRIES}).`
-      );
+      logger.warn('Massive rate limit hit, retrying request', {
+        ticker,
+        date,
+        attempt,
+        maxRetries: MAX_429_RETRIES,
+        retryDelayMs,
+      });
       await sleep(retryDelayMs);
     }
   }

@@ -1,14 +1,16 @@
-# Welcome to your CDK TypeScript project
+# Infra Package
 
-This is a blank project for CDK development with TypeScript.
+This package contains CDK infrastructure and Lambda code for the Stocks Serverless Pipeline.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+Canonical project documentation lives in the root README:
 
-## Useful commands
+- [`../README.md`](../README.md)
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `npx cdk deploy`  deploy this stack to your default AWS account/region
-* `npx cdk diff`    compare deployed stack with current state
-* `npx cdk synth`   emits the synthesized CloudFormation template
+## Common Commands
+
+- `npm run build` - compile TypeScript
+- `npm run test` - run infra/lambda tests
+- `npm run watch` - TypeScript watch mode
+- `npm run dev:api` - run local API server (`/movers`, `/history`)
+- `npx cdk synth` - synthesize CloudFormation template
+- `npx cdk deploy` - deploy stack to AWS

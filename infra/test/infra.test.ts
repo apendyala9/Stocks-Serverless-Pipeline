@@ -138,7 +138,7 @@ describe('StocksIngestionStack', () => {
     template.resourceCountIs('AWS::Scheduler::Schedule', 1);
     template.hasResourceProperties('AWS::Scheduler::Schedule', {
       FlexibleTimeWindow: { Mode: 'OFF' },
-      ScheduleExpression: 'cron(0 21 * * ? *)',
+      ScheduleExpression: 'cron(30 0 * * ? *)',
       ScheduleExpressionTimezone: 'America/New_York',
       State: 'ENABLED',
       Target: {

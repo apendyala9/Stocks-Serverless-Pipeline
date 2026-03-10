@@ -44,7 +44,7 @@ describe('ingestion logic', () => {
       await loadIngestionLogicWithMocks();
 
     mockGetDateWithLookback.mockImplementation((lookback: number) =>
-      lookback === 0 ? '2026-03-10' : '2026-03-09'
+      lookback === 1 ? '2026-03-09' : '2026-03-08'
     );
 
     mockFetchTickerForDate.mockImplementation(
@@ -89,12 +89,12 @@ describe('ingestion logic', () => {
       async (_rest: unknown, ticker: string, date: string) => {
         const data: Record<string, Record<string, { open: number; close: number; percentChange: number }>> = {
           AAPL: {
-            '2026-03-10': { open: 100, close: 101, percentChange: 1 },
             '2026-03-09': { open: 100, close: 102, percentChange: 2 },
+            '2026-03-08': { open: 100, close: 101, percentChange: 1 },
           },
           MSFT: {
-            '2026-03-10': { open: 100, close: 99, percentChange: -1 },
             '2026-03-09': { open: 100, close: 103, percentChange: 3 },
+            '2026-03-08': { open: 100, close: 99, percentChange: -1 },
           },
         };
 
@@ -114,18 +114,18 @@ describe('ingestion logic', () => {
 
     const completeDates = await module.backfillHistory({} as never, 'DailyWinners');
 
-    expect(completeDates).toEqual(['2026-03-10', '2026-03-09']);
+    expect(completeDates).toEqual(['2026-03-09', '2026-03-08']);
     expect(mockStoreResultsForDate).toHaveBeenCalledTimes(2);
     expect(mockStoreResultsForDate).toHaveBeenNthCalledWith(
       1,
       'DailyWinners',
-      '2026-03-10',
+      '2026-03-09',
       expect.any(Array)
     );
     expect(mockStoreResultsForDate).toHaveBeenNthCalledWith(
       2,
       'DailyWinners',
-      '2026-03-09',
+      '2026-03-08',
       expect.any(Array)
     );
   });
@@ -135,10 +135,10 @@ describe('ingestion logic', () => {
 
     mockFetchTickerForDate.mockImplementation(
       async (_rest: unknown, ticker: string, date: string) => {
-        if (ticker === 'AAPL' && (date === '2026-03-10' || date === '2026-03-09')) {
+        if (ticker === 'AAPL' && (date === '2026-03-09' || date === '2026-03-08')) {
           return { symbol: ticker, open: 100, close: 101, percentChange: 1 };
         }
-        if (ticker === 'MSFT' && date === '2026-03-10') {
+        if (ticker === 'MSFT' && date === '2026-03-09') {
           return { symbol: ticker, open: 100, close: 99, percentChange: -1 };
         }
         return null;

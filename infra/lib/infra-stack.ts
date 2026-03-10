@@ -115,16 +115,16 @@ export class StocksIngestionStack extends cdk.Stack {
     );
 
     // Create the daily ingestion schedule
-    // Run the ingestion lambda daily after US market close
+    // Run the ingestion lambda daily at 12:30 AM ET (yesterday-first ingestion logic)
     const dailyIngestionSchedule = new scheduler.CfnSchedule(this, 'DailyIngestionSchedule', {
       flexibleTimeWindow: { mode: 'OFF' },
-      scheduleExpression: 'cron(0 21 * * ? *)',
+      scheduleExpression: 'cron(30 0 * * ? *)',
       scheduleExpressionTimezone: 'America/New_York',
       target: {
         arn: ingestionLambda.functionArn,
         roleArn: schedulerRole.roleArn,
       },
-      description: 'Run stock ingestion daily after US market close.',
+      description: 'Run stock ingestion daily at 12:30 AM ET.',
       state: 'ENABLED',
     });
 

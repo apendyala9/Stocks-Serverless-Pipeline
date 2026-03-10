@@ -30,7 +30,7 @@ const fetchHistory = async (rest: MassiveRestClient, ticker: string): Promise<Da
   const history: DatedTickerResult[] = [];
 
   for (
-    let lookback = 0;
+    let lookback = 1;
     lookback <= MAX_HISTORY_LOOKBACK_DAYS && history.length < HISTORY_DAYS;
     lookback += 1
   ) {
@@ -51,7 +51,7 @@ const fetchHistory = async (rest: MassiveRestClient, ticker: string): Promise<Da
 export const getLatestMarketDateResults = async (
   rest: MassiveRestClient
 ): Promise<{ date: string; results: TickerResult[] }> => {
-  for (let lookback = 0; lookback <= MAX_LOOKBACK_DAYS; lookback += 1) {
+  for (let lookback = 1; lookback <= MAX_LOOKBACK_DAYS; lookback += 1) {
     const candidateDate = getDateWithLookback(lookback);
     const candidateResults = await fetchResultsForDate(rest, candidateDate);
 
