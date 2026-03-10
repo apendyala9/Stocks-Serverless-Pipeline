@@ -21,8 +21,16 @@ export type DatedTickerResult = TickerResult & {
 export type MassiveRestClient = ReturnType<typeof restClient>;
 
 export type HttpErrorWithResponse = {
+  name?: string;
+  message?: string;
+  code?: string;
   response?: {
     status?: number;
     headers?: Record<string, string | number | undefined>;
+    data?: {
+      request_id?: string;
+      message?: string;
+      status?: string;
+    };
   };
 };

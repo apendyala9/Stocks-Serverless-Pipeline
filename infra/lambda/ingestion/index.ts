@@ -4,6 +4,7 @@ import type { EventBridgeEvent } from 'aws-lambda';
 import { WATCHLIST } from './config';
 import { getWinnerSymbol, storeResultsForDate, tableHasAnyData } from './dynamo';
 import { backfillHistory, getLatestMarketDateResults } from './ingestionLogic';
+import type { HttpErrorWithResponse } from './types';
 import { logger } from '../shared/logger';
 
 const secretsClient = new SecretsManagerClient({});
@@ -78,7 +79,15 @@ export const handler = async (_event: EventBridgeEvent<string, unknown>) => {
       }),
     };
   } catch (error) {
-    logger.error('Ingestion failed', { error });
+    const candidate = error as HttpErrorWithResponse;
+    logger.error('Ingestion failed', {
+      errorName: candidate.name ?? 'UnknownError',
+      errorCode: candidate.code,
+      errorMessage: candidate.message ?? 'Unknown failure',
+      statusCode: candidate.response?.status,
+      requestId: candidate.response?.data?.request_id,
+      providerMessage: candidate.response?.data?.message,
+    });
     return {
       statusCode: 500,
       body: JSON.stringify({ message: 'Ingestion failed.' }),
